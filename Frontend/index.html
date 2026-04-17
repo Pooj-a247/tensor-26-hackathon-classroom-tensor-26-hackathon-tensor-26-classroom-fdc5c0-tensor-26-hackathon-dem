@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Academiq — Student Knowledge Gap Detector</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ══════════════════════════════════════════
+       TOP NAV
+  ══════════════════════════════════════════ -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      Academiq
+    </div>
+    <div class="nav-pills">
+      <button class="nav-pill active"  onclick="showView('dashboard')">Dashboard</button>
+      <button class="nav-pill"         onclick="showView('students')">Students</button>
+      <button class="nav-pill"         onclick="showView('plans')">Study Plans</button>
+      <button class="nav-pill"         onclick="showView('eval')">Evaluation</button>
+    </div>
+    <div class="nav-right">
+      <span class="badge-live">Live</span>
+      <div class="avatar" title="Ms. Priya Anand">PA</div>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════════
+       MAIN CONTENT
+  ══════════════════════════════════════════ -->
+  <main class="main">
+
+    <!-- ────────────────────────────────────────
+         DASHBOARD VIEW
+    ──────────────────────────────────────── -->
+    <div id="view-dashboard">
+
+      <div class="section-header">
+        <div>
+          <div class="section-title">Class Overview</div>
+          <div class="section-subtitle">Grade 10 · Mathematics &amp; Science · 28 students · Quiz batch #7</div>
+        </div>
+        <button class="gen-plan-btn" onclick="runAIAnalysis()">
+          <span id="ai-btn-text">Run AI Analysis</span>
+        </button>
+      </div>
+
+      <!-- Stat strip -->
+      <div class="stat-strip">
+        <div class="stat-card">
+          <div class="stat-label">Avg. Score</div>
+          <div class="stat-val">67<span style="font-size:18px;color:var(--ink-muted)">%</span></div>
+          <div class="stat-sub"><span class="stat-delta delta-down">▾ 4%</span> vs last quiz</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Students at Risk</div>
+          <div class="stat-val" style="color:var(--danger)">8</div>
+          <div class="stat-sub">Below 50% mastery</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Gaps Detected</div>
+          <div class="stat-val">23</div>
+          <div class="stat-sub">Across 8 topics</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Plans Generated</div>
+          <div class="stat-val" style="color:var(--accent)">12</div>
+          <div class="stat-sub"><span class="stat-delta delta-up">↑ 100%</span> AI-personalised</div>
+        </div>
+      </div>
+
+      <!-- Heatmap + Top Gaps -->
+      <div class="two-col">
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Class Knowledge Heatmap</span>
+            <span class="card-tag" style="background:var(--surface-2);color:var(--ink-muted)">8 topics · 28 students</span>
+          </div>
+          <div class="card-body">
+            <div class="tooltip-hint">Hover cells to inspect · Red = critical gap · Green = mastered</div>
+            <div style="margin-top:12px;" id="heatmap-container"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Top Knowledge Gaps</span>
+            <span class="card-tag" style="background:var(--danger-light);color:var(--danger)">Class-wide</span>
+          </div>
+          <div class="card-body">
+            <div class="top-gap-list" id="top-gaps-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Topic mastery + Time chart -->
+      <div class="two-col">
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Curriculum Topic Mastery</span>
+            <span class="card-tag" style="background:var(--accent-light);color:var(--accent)">Mapped</span>
+          </div>
+          <div class="card-body">
+            <div class="topic-tree" id="topic-tree"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Time-on-Question Analysis</span>
+          </div>
+          <div class="card-body">
+            <div style="position:relative;width:100%;height:220px;">
+              <canvas id="timeChart"
+                      role="img"
+                      aria-label="Bar chart of average time spent per topic question">
+                Time-on-question data by topic
+              </canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /view-dashboard -->
+
+
+    <!-- ────────────────────────────────────────
+         STUDENTS VIEW
+    ──────────────────────────────────────── -->
+    <div id="view-students" style="display:none">
+
+      <div class="section-header">
+        <div>
+          <div class="section-title">Student Analysis</div>
+          <div class="section-subtitle">Individual performance · Knowledge gap mapping · Risk stratification</div>
+        </div>
+      </div>
+
+      <!-- Expandable detail panel -->
+      <div class="gap-detail" id="gap-detail-panel">
+        <div class="gap-detail-header">
+          <div class="avatar" id="detail-avatar" style="width:44px;height:44px;font-size:16px;">??</div>
+          <div>
+            <div class="gap-detail-name" id="detail-name">Student</div>
+            <div style="font-size:13px;color:var(--ink-muted)" id="detail-meta"></div>
+          </div>
+          <button onclick="closeDetail()"
+                  style="margin-left:auto;border:0.5px solid var(--border-strong);background:none;
+                         color:var(--ink-muted);padding:6px 14px;border-radius:var(--r);
+                         cursor:pointer;font-family:var(--font-body);font-size:13px;">Close</button>
+        </div>
+        <div class="gap-radar" id="detail-radar"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-body" style="padding:0;">
+          <div class="scroll-x">
+            <table class="stud-table">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Score</th>
+                  <th>Knowledge Gaps</th>
+                  <th>Avg Time/Q</th>
+                  <th>Risk</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="student-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /view-students -->
+
+
+    <!-- ────────────────────────────────────────
+         STUDY PLANS VIEW
+    ──────────────────────────────────────── -->
+    <div id="view-plans" style="display:none">
+
+      <div class="section-header">
+        <div>
+          <div class="section-title">Personalised Study Plans</div>
+          <div class="section-subtitle">AI-generated 7-day remedial schedules · Aligned to curriculum gaps</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-body">
+          <div class="student-select-wrap">
+            <label style="font-size:13px;color:var(--ink-muted);font-weight:500;">Generate plan for:</label>
+            <select class="student-select" id="plan-student-select" onchange="onPlanStudentChange()">
+              <option value="">— select student —</option>
+            </select>
+            <button class="gen-plan-btn" id="gen-plan-btn" onclick="generatePlan()">
+              <span id="plan-btn-text">Generate Plan</span>
+            </button>
+            <div class="ai-spinner" id="plan-spinner" style="display:none;">
+              <div class="ai-dot"></div>
+              <div class="ai-dot"></div>
+              <div class="ai-dot"></div>
+              <span>AI is building your plan…</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="plan-output">
+        <div class="plan-msg">Select a student and click Generate Plan</div>
+      </div>
+
+    </div><!-- /view-plans -->
+
+
+    <!-- ────────────────────────────────────────
+         EVALUATION VIEW
+    ──────────────────────────────────────── -->
+    <div id="view-eval" style="display:none">
+
+      <div class="section-header">
+        <div>
+          <div class="section-title">Evaluation Metrics</div>
+          <div class="section-subtitle">Model performance · Gap detection accuracy · Study plan relevance</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+
+        <div class="card">
+          <div class="card-head"><span class="card-title">Gap Detection Performance</span></div>
+          <div class="card-body">
+            <div class="eval-grid">
+              <div class="eval-metric">
+                <div class="eval-metric-name">Precision</div>
+                <div class="eval-bar-wrap"><div class="eval-bar-fill" style="width:91%;background:#2b2bff;"></div></div>
+                <div class="eval-metric-score">91.3%</div>
+              </div>
+              <div class="eval-metric">
+                <div class="eval-metric-name">Recall</div>
+                <div class="eval-bar-wrap"><div class="eval-bar-fill" style="width:87%;background:#1a8a4a;"></div></div>
+                <div class="eval-metric-score">87.6%</div>
+              </div>
+              <div class="eval-metric">
+                <div class="eval-metric-name">F1 Score</div>
+                <div class="eval-bar-wrap"><div class="eval-bar-fill" style="width:89%;background:#c97a00;"></div></div>
+                <div class="eval-metric-score">89.4%</div>
+              </div>
+              <div class="eval-metric">
+                <div class="eval-metric-name">vs. Teacher Labels</div>
+                <div class="eval-bar-wrap"><div class="eval-bar-fill" style="width:93%;background:#d93025;"></div></div>
+                <div class="eval-metric-score">93.1% match</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="card-title">Study Plan Relevance</span></div>
+          <div class="card-body">
+            <div style="position:relative;width:100%;height:200px;">
+              <canvas id="relevanceChart"
+                      role="img"
+                      aria-label="Donut chart of study plan human relevance scores">
+                Study plan scores: Excellent 38%, Good 42%, Average 14%, Poor 6%
+              </canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Dashboard Rendering Performance</span></div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+            <div style="text-align:center;padding:16px;background:var(--surface-2);border-radius:var(--r);">
+              <div style="font-size:11px;color:var(--ink-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.07em;">Initial Load</div>
+              <div style="font-family:var(--font-mono);font-size:22px;font-weight:500;color:var(--ok);">0.8s</div>
+            </div>
+            <div style="text-align:center;padding:16px;background:var(--surface-2);border-radius:var(--r);">
+              <div style="font-size:11px;color:var(--ink-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.07em;">AI Plan Gen</div>
+              <div style="font-family:var(--font-mono);font-size:22px;font-weight:500;color:var(--accent);">2.3s</div>
+            </div>
+            <div style="text-align:center;padding:16px;background:var(--surface-2);border-radius:var(--r);">
+              <div style="font-size:11px;color:var(--ink-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.07em;">Heatmap Render</div>
+              <div style="font-family:var(--font-mono);font-size:22px;font-weight:500;color:var(--ok);">42ms</div>
+            </div>
+            <div style="text-align:center;padding:16px;background:var(--surface-2);border-radius:var(--r);">
+              <div style="font-size:11px;color:var(--ink-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.07em;">Chart FPS</div>
+              <div style="font-family:var(--font-mono);font-size:22px;font-weight:500;color:var(--ok);">60fps</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /view-eval -->
+
+  </main>
+</div><!-- /shell -->
+
+<!-- Chart.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<!-- App logic -->
+<script src="app.js"></script>
+
+</body>
+</html>
